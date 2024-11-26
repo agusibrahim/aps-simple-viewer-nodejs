@@ -1,6 +1,6 @@
 const express = require('express');
 const formidable = require('express-formidable');
-const { listObjects, uploadObject, translateObject, getManifest, urnify } = require('../services/aps.js');
+const { listObjects, uploadObject, translateObject, getManifest, urnify,getFileUrlByUrn } = require('../services/aps.js');
 
 let router = express.Router();
 
@@ -54,6 +54,16 @@ router.post('/api/models', formidable({ maxFileSize: Infinity }), async function
             urn: urnify(obj.objectId)
         });
     } catch (err) {
+        next(err);
+    }
+});
+router.get('/api/models/:urn/detail', async function (req, res, next) {
+    try {
+        const urn = req.params.urn;
+        const url = await getFileUrlByUrn(urn); // Call the APS service function
+        res.json({ url }); // Return the signed URL in the response
+    } catch (err) {
+        console.error('Error generating download URL:', err.message);
         next(err);
     }
 });

@@ -88,5 +88,47 @@ service.getManifest = async (urn) => {
         }
     }
 };
+// modif
+service.listObjectsInFolder = async (folderName) => {
+    folderName=folderName.toLowerCase();
+    await service.ensureBucketExists(folderName);
+    const accessToken = await getInternalToken();
+    let resp = await ossClient.getObjects(folderName, { limit: 64, accessToken });
+    let objects = resp.items;
+    while (resp.next) {
+        const startAt = new URL(resp.next).searchParams.get('startAt');
+        resp = await ossClient.getObjects(folderName, { limit: 64, startAt, accessToken });
+        objects = objects.concat(resp.items);
+    }
+    return objects.map(obj => obj.objectKey); // Return list of object keys
+};
+
+service.uploadObjectToFolder = async (folderName, objectName, filePath) => {
+    await service.ensureBucketExists(APS_BUCKET);
+    const accessToken = await getInternalToken();
+    const objectKey = `${folderName}/${objectName}`; // Add folder prefix to object name
+    const obj = await ossClient.upload(APS_BUCKET, objectKey, filePath, { accessToken });
+    return obj;
+};
+service.getFileUrlByUrn = async (urn) => {
+    const accessToken = await getInternalToken();
+    try {
+        // Decode the URN to get the objectKey
+        const decodedUrn = Buffer.from(urn, 'base64').toString('ascii');
+        const bucketKey = APS_BUCKET; // Default bucket from configuration
+        const objectKey = decodedUrn; // Assume decoded URN is the objectKey
+
+        // Use OSS API to get object details, including signed URL
+        const objectDetails = await ossClient.getObjectDetails(bucketKey, objectKey, { accessToken });
+
+        // Extract the signed URL from the object details
+        const signedUrl = objectDetails.signedUrl;
+
+        return objectDetails;
+    } catch (err) {
+        console.error('Error generating signed URL for URN:', err.message);
+        throw err;
+    }
+};
 
 service.urnify = (id) => Buffer.from(id).toString('base64').replace(/=/g, '');
