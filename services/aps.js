@@ -56,6 +56,25 @@ service.uploadObject = async (objectName, filePath) => {
     const obj = await ossClient.upload(APS_BUCKET, objectName, filePath, { accessToken });
     return obj;
 };
+service.uploadObjectFromBase64 = async (objectName, base64Data) => {
+    await service.ensureBucketExists(APS_BUCKET);
+    const accessToken = await getInternalToken();
+
+    // Decode Base64 to binary data
+    const binaryData = Buffer.from(base64Data, 'base64');
+
+    try {
+        // Upload the binary data to the bucket
+        const obj = await ossClient.upload(APS_BUCKET, objectName, binaryData, {
+            accessToken,
+            contentType: 'application/octet-stream' // You can set appropriate content type if known
+        });
+        return obj;
+    } catch (err) {
+        console.error('Error uploading object from Base64:', err.message);
+        throw err;
+    }
+};
 
 service.translateObject = async (urn, rootFilename) => {
     const accessToken = await getInternalToken();

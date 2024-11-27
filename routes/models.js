@@ -1,6 +1,6 @@
 const express = require('express');
 const formidable = require('express-formidable');
-const { listObjects, uploadObject, translateObject, getManifest, urnify,getFileUrlByUrn } = require('../services/aps.js');
+const { listObjects, uploadObject, translateObject, getManifest, urnify,getFileUrlByUrn,uploadObjectFromBase64 } = require('../services/aps.js');
 
 let router = express.Router();
 
@@ -54,6 +54,29 @@ router.post('/api/models', formidable({ maxFileSize: Infinity }), async function
             urn: urnify(obj.objectId)
         });
     } catch (err) {
+        next(err);
+    }
+});
+router.post('/api/models/upload-base64', async function (req, res, next) {
+    const { objectName, base64Data } = req.body;
+
+    if (!objectName || !base64Data) {
+        return res.status(400).json({
+            error: 'The fields "objectName" and "base64Data" are required.',
+        });
+    }
+
+    try {
+        const result = await uploadObjectFromBase64(objectName, base64Data);
+        res.status(200).json({
+            message: 'File uploaded successfully.',
+            objectKey: result.objectKey,
+            urn: urnify(result.objectId),
+            size: result.size,
+            location: result.location,
+        });
+    } catch (err) {
+        console.error('Error uploading file:', err.message);
         next(err);
     }
 });
