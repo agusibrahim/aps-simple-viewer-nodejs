@@ -23,6 +23,15 @@ async function getInternalToken() {
 service.getViewerToken = async () => {
     return await authenticationClient.getTwoLeggedToken(APS_CLIENT_ID, APS_CLIENT_SECRET, [Scopes.ViewablesRead]);
 };
+service.getFullAccessToken = async () => {
+    return await authenticationClient.getTwoLeggedToken(APS_CLIENT_ID, APS_CLIENT_SECRET, [
+        Scopes.DataRead,
+        Scopes.DataCreate,
+        Scopes.DataWrite,
+        Scopes.BucketCreate,
+        Scopes.BucketRead
+    ]);
+};
 
 service.ensureBucketExists = async (bucketKey) => {
     const accessToken = await getInternalToken();
@@ -146,6 +155,23 @@ service.getFileUrlByUrn = async (urn) => {
         return objectDetails;
     } catch (err) {
         console.error('Error generating signed URL for URN:', err.message);
+        throw err;
+    }
+};
+service.getThumbnailByUrn = async (urn) => {
+    const accessToken = await getInternalToken();
+
+    try {
+        // Fetch the thumbnail using ModelDerivativeClient
+        const response = await modelDerivativeClient.getThumbnail(urn, { accessToken,width:500,height:500 });
+        console.log(`-->${response}<--`)
+        // Return the thumbnail as a buffer
+        return response; // Buffer of the thumbnail
+    } catch (err) {
+        console.error('Error fetching thumbnail:', err.message);
+        if (err.axiosError && err.axiosError.response.status === 404) {
+            throw new Error('Thumbnail not found for the given URN');
+        }
         throw err;
     }
 };

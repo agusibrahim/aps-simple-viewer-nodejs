@@ -1,6 +1,6 @@
 const express = require('express');
 const formidable = require('express-formidable');
-const { listObjects, uploadObject, translateObject, getManifest, urnify,getFileUrlByUrn,uploadObjectFromBase64 } = require('../services/aps.js');
+const { listObjects, uploadObject, translateObject, getManifest, urnify,getFileUrlByUrn,uploadObjectFromBase64,getThumbnailByUrn } = require('../services/aps.js');
 
 let router = express.Router();
 
@@ -87,6 +87,27 @@ router.get('/api/models/:urn/detail', async function (req, res, next) {
         res.json({ url }); // Return the signed URL in the response
     } catch (err) {
         console.error('Error generating download URL:', err.message);
+        next(err);
+    }
+});
+router.get('/api/models/:urn/thumbnail', async function (req, res, next) {
+    try {
+        const urn = req.params.urn;
+
+        // Call the APS service function to get the thumbnail
+        const thumbnail = await getThumbnailByUrn(urn);
+
+        // Send the thumbnail buffer as an image response
+        res.set('Content-Type', 'image/png');
+        res.send(thumbnail);
+    } catch (err) {
+        console.error('Error fetching thumbnail:', err.message);
+
+        // Handle specific errors
+        if (err.message.includes('Thumbnail not found')) {
+            return res.status(404).json({ error: 'Thumbnail not found for the given URN' });
+        }
+
         next(err);
     }
 });
